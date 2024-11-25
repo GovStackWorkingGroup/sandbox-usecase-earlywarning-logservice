@@ -1,0 +1,15 @@
+version: '3.3'
+
+services:
+  backend:
+    container_name: log-service
+    build:
+      context: .
+    restart: always
+    ports:
+      - '8085:8085'
+    networks:
+      - shared_network
+networks:
+  shared_network:
+    external: true
