@@ -13,7 +13,9 @@ import java.time.LocalDateTime;
 public class Log {
     @Id
     private Long id;
-    private String text;
+    private String sender;
+    private String receiver;
+    private String content;
     private boolean processed;
     private String broadcast;
     private LocalDateTime timestamp;

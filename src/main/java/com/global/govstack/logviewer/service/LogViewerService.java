@@ -29,7 +29,9 @@ public class LogViewerService {
     public Mono<Void> handleIncomingLogsFromIM(String logMessage) {
         final LogInfoDto dto = this.mapIncomingMessage(logMessage);
         final Log saveLog = new Log();
-        saveLog.setText(dto.toString());
+        saveLog.setSender(dto.from());
+        saveLog.setReceiver(dto.to());
+        saveLog.setContent(dto.content());
         saveLog.setBroadcast(dto.broadcastId());
         saveLog.setTimestamp(LocalDateTime.now());
         return this.logRepository.save(saveLog)
@@ -45,27 +47,62 @@ public class LogViewerService {
         }
 
     }
+    //TODO remove once connected to FE
 
-    public Flux<Log> readLog(String broadcastId) {
+//    public Flux<Log> readLog(String broadcastId) {
+//        log.info("Starting to read logs");
+//        return Flux.interval(Duration.ofSeconds(1))
+//                .flatMap(tick ->
+//                        logRepository.findLogByProcessedFalseOrderByTimestampAsc(broadcastId)
+//                                .flatMap(l -> {
+//                                    log.info("Found unprocessed log: {}", l);
+//                                    l.setProcessed(Boolean.TRUE);
+//                                    return logRepository.save(l)
+//                                            .doOnNext(savedLog -> log.info("Log saved as processed: {}", savedLog))
+//                                            .doOnError(error -> log.error("Error saving log: {}", error));
+//                                })
+//                                .switchIfEmpty(Mono.defer(Mono::empty))
+//                                .doOnError(error -> log.error("Error while processing logs: ", error))
+//                )
+//                .doOnSubscribe(subscription -> log.info("Subscribed to readLog"))
+//                .doOnNext(l -> log.info("Successfully processed log: {}", l))
+//                .doOnError(error -> log.error("Stream error occurred: ", error))
+//                .onErrorContinue((throwable, obj) ->
+//                        log.error("Continuing after error: {} with object: {}", throwable.getMessage(), obj)
+//                ).as(transactionalOperator::transactional);
+//    }
+
+    public Flux<String> readLog(String broadcastId) {
         log.info("Starting to read logs");
         return Flux.interval(Duration.ofSeconds(1))
-                .flatMap(tick ->
-                        logRepository.findLogByProcessedFalseOrderByTimestampAsc(broadcastId)
-                                .flatMap(l -> {
-                                    log.info("Found unprocessed log: {}", l);
-                                    l.setProcessed(Boolean.TRUE);
-                                    return logRepository.save(l)
-                                            .doOnNext(savedLog -> log.info("Log saved as processed: {}", savedLog))
-                                            .doOnError(error -> log.error("Error saving log: {}", error));
-                                })
-                                .switchIfEmpty(Mono.defer(Mono::empty))
-                                .doOnError(error -> log.error("Error while processing logs: ", error))
-                )
-                .doOnSubscribe(subscription -> log.info("Subscribed to readLog"))
-                .doOnNext(l -> log.info("Successfully processed log: {}", l))
-                .doOnError(error -> log.error("Stream error occurred: ", error))
-                .onErrorContinue((throwable, obj) ->
-                        log.error("Continuing after error: {} with object: {}", throwable.getMessage(), obj)
-                ).as(transactionalOperator::transactional);
+                .flatMap(tick -> logRepository.findLogByProcessedFalseOrderByTimestampAsc(broadcastId).flatMap(logEntity -> {
+                            log.info("Found unprocessed log: {}", logEntity);
+
+                            // Mark the log as processed
+                            logEntity.setProcessed(Boolean.TRUE);
+
+                            // Save the log and map to LogInfoDto
+                            return logRepository.save(logEntity)
+                                    .doOnNext(savedLog -> log.info("Log saved as processed: {}", savedLog))
+                                    .doOnError(error -> log.error("Error saving log: {}", error))
+                                    .flatMap(savedLog -> {
+                                        try {
+                                            // Map to LogInfoDto
+                                            String logInfoDto = mapper.writeValueAsString(savedLog);
+                                            return Mono.just(logInfoDto);
+                                        } catch (Exception e) {
+                                            log.error("Error mapping Log to LogInfoDto: {}", e.getMessage());
+                                            return Mono.error(e);
+                                        }
+                                    });
+                        })
+                        .switchIfEmpty(Mono.defer(Mono::empty))) // Handles empty logs gracefully
+//                .doOnSubscribe(subscription -> log.info("Subscribed to readLog"))
+//                .doOnNext(logInfo -> log.info("Successfully processed log: {}", logInfo))
+//                .doOnError(error -> log.error("Stream error occurred: ", error))
+//                .onErrorContinue((throwable, obj) ->
+//                        log.error("Continuing after error: {} with object: {}", throwable.getMessage(), obj))
+                .as(transactionalOperator::transactional); // Wrap with transaction management
     }
+
 }
