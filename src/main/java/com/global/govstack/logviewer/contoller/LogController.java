@@ -1,5 +1,6 @@
 package com.global.govstack.logviewer.contoller;
 
+import com.global.govstack.logviewer.repository.entity.Log;
 import com.global.govstack.logviewer.service.LogViewerService;
 import lombok.AllArgsConstructor;
 import org.springframework.http.MediaType;
@@ -17,7 +18,7 @@ public class LogController {
     private final LogViewerService logViewerService;
 
     @GetMapping(path = {"{broadcastId}"}, produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    public Flux<String> readSystemLogs(@PathVariable String broadcastId) {
+    public Flux<Log> readSystemLogs(@PathVariable String broadcastId) {
         return this.logViewerService.readLog(broadcastId);
     }
 }
