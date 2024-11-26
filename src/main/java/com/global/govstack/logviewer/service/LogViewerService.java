@@ -47,7 +47,6 @@ public class LogViewerService {
         }
 
     }
-    //TODO remove once connected to FE
 
     public Flux<Log> readLog(String broadcastId) {
         log.info("Starting to read logs");
