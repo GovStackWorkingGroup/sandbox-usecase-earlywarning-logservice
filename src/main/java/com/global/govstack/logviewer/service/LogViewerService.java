@@ -63,7 +63,9 @@ public class LogViewerService {
                                 .switchIfEmpty(Mono.defer(Mono::empty))
                                 .doOnError(error -> log.error("Error while processing logs: ", error))
                 )
+                .take(7)
                 .doOnSubscribe(subscription -> log.info("Subscribed to readLog"))
+                .doOnComplete(() -> log.info("Completed processing logs. Closing connection."))
                 .doOnNext(l -> log.info("Successfully processed log: {}", l))
                 .doOnError(error -> log.error("Stream error occurred: ", error))
                 .onErrorContinue((throwable, obj) ->

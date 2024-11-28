@@ -12,12 +12,4 @@ import reactor.core.publisher.Mono;
 public interface LogRepository extends ReactiveCrudRepository<Log, Long> {
     @Query("SELECT l.* FROM LOG l WHERE l.processed is false and l.broadcast = :broadcastId order by l.timestamp asc limit 1")
     Mono<Log> findLogByProcessedFalseOrderByTimestampAsc(String broadcastId);
-
-    @Modifying
-    @Query("UPDATE LOG l SET l.processed = TRUE where l.id= :id")
-    Mono<Log> updateLog(Long id);
-
-    @Modifying
-    @Query("UPDATE LOG l SET l.processed = TRUE where l.broadcast = :broadcastId AND l.processed = FALSE")
-    Mono<Log> updateLogs(String broadcastId);
 }
